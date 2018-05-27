@@ -1,9 +1,12 @@
 function returnURL() {
   
-  // Get variables from the properties service
+  // Get variables first from the cache, then the properties service if that fails
   var scriptProperties = PropertiesService.getScriptProperties();
-  var client_id = scriptProperties.getProperty('client_id');
-  var redirect_uri = scriptProperties.getProperty('redirect_uri');
+  var sCache = CacheService.getScriptCache();
+  var client_id = sCache.get("client_id") ? sCache.get("client_id") : scriptProperties.getProperty('client_id');
+  var redirect_uri = sCache.get("redirect_uri") ? sCache.get("redirect_uri") : scriptProperties.getProperty('redirect_uri');
+  sCache.putAll({"client_id" : client_id,
+                 "redirect_uri" : redirect_uri}, 21000); //5hrs 50.
   
   ////////////////////////////////////////////////////////////////////////////////////////////////////////
   
@@ -44,12 +47,23 @@ function returnURL() {
 
 function doGet(e){
  
-  // Get variables from the properties service
+  // Get variables first from the cache, then the properties service if that fails
   var scriptProperties = PropertiesService.getScriptProperties();
-  var client_id = scriptProperties.getProperty('client_id');
-  var client_secret = scriptProperties.getProperty('client_secret');
-  var redirect_uri = scriptProperties.getProperty('redirect_uri');
-  var state_token = scriptProperties.getProperty('state_token');
+  var sCache = CacheService.getScriptCache();
+  var cached = sCache.getAll(["client_id","client_secret","redirect_uri","state_token"]);
+  var client_id = cached ? cached.client_id : null;
+  var client_secret = cached ? cached.client_secret : null;
+  var redirect_uri = cached ? cached.redirect_uri : null;
+  var state_token = cached ? cached.state_token : null;
+  
+  if(client_id==null || client_secret==null || redirect_uri==null || state_token==null){
+   var allProps = scriptProperties.getProperties();
+    client_id = allProps.client_id;
+    client_secret = allProps.client_secret;
+    redirect_uri = allProps.redirect_uri;
+    state_token = allProps.state_token;
+    sCache.putAll({"client_id":client_id,"client_secret":client_secret,"redirect_uri":redirect_uri,"state_token":state_token},3600);//1 hr
+  }
 
   
   ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -137,16 +151,34 @@ function doGet(e){
 --------------------------------------------------------------------------------------------------------------------------------------------*/
 
 function refreshToken() {
-  
-  //Get variables from the properties service
   var scriptProperties = PropertiesService.getScriptProperties();
-   var token =  scriptProperties.getProperty('token');
-  var expires_in = scriptProperties.getProperty('expires_in');
-  var refresh_token = scriptProperties.getProperty('refresh_token');
-  var client_id = scriptProperties.getProperty('client_id');
-  var client_secret = scriptProperties.getProperty('client_secret');
-  var token_expiry_time = scriptProperties.getProperty('token_expiry_time');
-    
+  // get values from cache
+  var sCache = CacheService.getScriptCache();
+  var cached = sCache.getAll(["token","expires_in","refresh_token","client_id","client_secret","token_expiry_time"]);
+  var token = cached ? cached.token : null,
+      expires_in = cached ? cached.expires_in : null,
+      refresh_token = cached ? cached.refresh_token : null,
+      client_id = cached ? cached.client_id : null,
+      client_secret = cached ? cached.client_secret : null,
+      token_expiry_time = cached ? cached.token_expiry_time : null;
+  //if cache fails for any values, update all from one properties call.
+  if(token==null || expires_in==null || refresh_token==null || client_id==null || client_secret==null || token_expiry_time==null){
+    //Get variables from the properties service
+   var allProps = scriptProperties.getProperties();
+    token = allProps.token;
+    expires_in = allProps.expires_in;
+    refresh_token = allProps.refresh_token;
+    client_id = allProps.client_id;
+    client_secret = allProps.client_secret;
+    token_expiry_time = allProps.token_expiry_time;
+    sCache.putAll({"token" : token,
+                   "expires_in" : expires_in,
+                   "refresh_token" : refresh_token,
+                   "client_id": client_id,
+                   "client_secret":client_secret,
+                   "token_expiry_time":token_expiry_time
+                  },3600);//1 hr
+  }  
   ////////////////////////////////////////////////////////////////////////////////////////////////////////
   
   
@@ -205,9 +237,9 @@ function refreshToken() {
   var expires = timeStamp + ((expires_in*1000)-(10*60*1000));  //Set the expiry time to 10 minutes before the token expires on the Monzo servers
 
   //Add the required response data to the properties service for future use
-  scriptProperties.setProperty('token', token);
-  scriptProperties.setProperty('expires_in', expires_in);
-  scriptProperties.setProperty('refresh_token', refresh_token);
-  scriptProperties.setProperty('token_expiry_time', expires);
+    scriptProperties.setProperties({'token': token,
+    'expires_in': expires_in,
+      'refresh_token': refresh_token,
+        'token_expiry_time': expires});
   return(0);
 }
