@@ -1,3 +1,9 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MONZO OAUTH
+//
+//From https://github.com/Andy-EOS/Monzo-Google-Sheets
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 function returnURL() {
   
   // Get variables first from the cache, then the properties service if that fails
@@ -65,9 +71,7 @@ function doGet(e){
     sCache.putAll({"client_id":client_id,"client_secret":client_secret,"redirect_uri":redirect_uri,"state_token":state_token},3600);//1 hr
   }
 
-  
   ////////////////////////////////////////////////////////////////////////////////////////////////////////
-  
   
   // Define fixed variables
   var method = 'post'
@@ -129,11 +133,10 @@ function doGet(e){
   var expires = timeStamp + ((expires_in*1000)-(10*60*1000));  //Set the expiry time to 10 minutes before the token expires on the Monzo servers
 
   // Store the nescesary data in the properties service
-  scriptProperties.setProperty('token', token);
-  scriptProperties.setProperty('expires_in', expires_in);
-  scriptProperties.setProperty('refresh_token', refresh_token);
-  scriptProperties.setProperty('token_expiry_time', expires);
-  
+  scriptProperties.setProperties({'token': token,
+   'expires_in': expires_in,
+   'refresh_token': refresh_token,
+     'token_expiry_time': expires}, false);
   ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     return ContentService.createTextOutput("Authentication complete");
@@ -178,7 +181,7 @@ function refreshToken() {
                    "client_secret":client_secret,
                    "token_expiry_time":token_expiry_time
                   },3600);//1 hr
-  }  
+  }    
   ////////////////////////////////////////////////////////////////////////////////////////////////////////
   
   
@@ -237,7 +240,7 @@ function refreshToken() {
   var expires = timeStamp + ((expires_in*1000)-(10*60*1000));  //Set the expiry time to 10 minutes before the token expires on the Monzo servers
 
   //Add the required response data to the properties service for future use
-    scriptProperties.setProperties({'token': token,
+  scriptProperties.setProperties({'token': token,
     'expires_in': expires_in,
       'refresh_token': refresh_token,
         'token_expiry_time': expires});
